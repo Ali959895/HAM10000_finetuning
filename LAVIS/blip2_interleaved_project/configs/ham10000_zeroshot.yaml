@@ -1,0 +1,49 @@
+# HAM10000 zero-shot multiclass config (BLIP2/CLIP)
+seed: 42
+
+run:
+  output_root: /scratch/ali95/blip2_interleaved_project/runs
+  exp_name: ham10000_zeroshot_blip2
+
+data:
+  # Update these paths to your dataset
+  images_dir: /scratch/ali95/datasets/HAM10000/images
+  meta_csv: /scratch/ali95/datasets/HAM10000/HAM10000_metadata.csv
+  splits_dir: /scratch/ali95/datasets/HAM10000/splits_lesion
+  img_ext: .jpg
+  img_size: 224
+  num_workers: 4
+
+model:
+  name: blip2            # one of: blip2 | clip | interleaved_blip2
+  num_classes: 7
+  blip2:
+    lavis_name: blip2_feature_extractor
+    model_type: pretrain_vitL
+    device: cuda
+
+eval:
+  batch_size: 64
+  temperature: 2.0
+  prompt_templates:
+    - "a dermatoscopic image of {}."
+    - "a clinical photo of {}."
+    - "a close-up photo of {} skin lesion."
+    - "this is {}."
+    - "a medical image showing {}."
+    - "a skin lesion consistent with {}."
+    - "a dermatologist photo of {}."
+  synonyms:
+    akiec: ["actinic keratosis", "Bowen's disease", "squamous cell carcinoma in situ"]
+    bcc: ["basal cell carcinoma", "basal cell cancer"]
+    bkl: ["benign keratosis", "seborrheic keratosis", "solar lentigo"]
+    df: ["dermatofibroma"]
+    mel: ["melanoma", "malignant melanoma"]
+    nv: ["melanocytic nevus", "nevus", "mole"]
+    vasc: ["vascular lesion", "angioma", "hemangioma"]
+
+wandb:
+  enabled: true
+  project: ham10000
+  mode: offline
+  tags: ["zeroshot","multiclass","blip2"]

@@ -1,0 +1,57 @@
+# COCO LoRA BLIP-2 config (offline-safe)
+run:
+  output_dir: /scratch/ali95/runs/blip2_coco_lora
+  seed: 42
+  resume_from: ""   # set to checkpoint path if you want resume
+  save_every_steps: 2000
+  eval_every_steps: 2000
+  log_every_steps: 50
+  num_workers: 6
+
+data:
+  images_dir: /scratch/ali95/coco/train2017
+  ann_train:  /scratch/ali95/coco/annotations/captions_train2017.json
+  ann_val:    /scratch/ali95/coco/annotations/captions_val2017.json
+  # Optional retrieval/AP logging (needs instances json)
+  instances_val: /scratch/ali95/coco/annotations/instances_val2017.json
+
+model:
+  # You must have this model available in HF cache (offline).
+  # Download on a machine with internet, then copy the cache to Narval.
+  hf_model_name: Salesforce/blip2-flan-t5-xl
+  max_text_len: 32
+  use_gradient_checkpointing: true
+
+lora:
+  enabled: true
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  # Typical LoRA targets for T5:
+  target_modules: ["q", "k", "v", "o"]
+  bias: "none"
+
+train:
+  precision: bf16   # bf16 recommended on A100
+  epochs: 1
+  batch_size: 2
+  grad_accum_steps: 8
+  lr: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.03
+  max_steps: -1     # set >0 to override epochs
+  max_grad_norm: 1.0
+
+eval:
+  num_samples: 2000   # quick eval subset; set -1 for full val
+  compute_caption_metrics: true
+  compute_retrieval_ap: true  # optional (see notes in script)
+
+wandb:
+  enabled: true
+  project: blip2-coco-lora
+  entity: ""          # optional
+  run_name: blip2_flant5xl_lora_coco
+  tags: ["coco", "blip2", "lora", "offline"]
+  # always offline on Narval compute nodes
+  mode: offline

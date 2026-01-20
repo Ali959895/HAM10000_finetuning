@@ -1,0 +1,56 @@
+exp_name: coco_zeroshot_trainval
+seed: 123
+deterministic: true
+device: cuda
+task: coco_multilabel
+
+data:
+  img_size: 224
+  num_workers: 4
+  coco:
+    # These default to VAL. The sbatch script overrides them for each split.
+    images_dir: ${oc.env:COCO_IMAGES_DIR,"/scratch/ali95/coco/coco/images/val2017"}
+    ann_json: ${oc.env:COCO_ANN_JSON,"/scratch/ali95/coco/coco/annotations/instances_val2017.json"}
+
+model:
+  baseline: blip2
+  blip2:
+    # Use 'pretrain' in this project (pretrain_opt2.7b is not supported for blip2_feature_extractor here)
+    model_type: pretrain
+
+eval:
+  batch_size: 64
+  prompt_template: 
+    - "a photo of a {}"
+    - "a photo of the {}"
+    - "a close-up photo of a {}"
+  shots: 0
+  label_text_metrics:
+    enabled: true
+    threshold: 0.0          # logit threshold; 0.0 == sigmoid>=0.5
+    topk: 0                 # if >0, uses top-k labels instead of threshold
+    max_samples: 2000        # keep BERTScore reasonable
+    bertscore_model: distilbert-base-uncased
+    lang: en
+
+temperature: 2.0
+normalize_features: true
+
+class_synonyms:
+    tv: ["television", "tv monitor", "flat screen television"]
+    cell phone: ["mobile phone", "smartphone", "phone"]
+    sports ball: ["ball"]
+    dining table: ["table"]
+    potted plant: ["plant", "house plant"]
+    couch: ["sofa"]
+    motorcycle: ["motorbike"]
+    airplane: ["aeroplane", "plane"]
+    traffic light: ["stoplight"]
+    fire hydrant: ["hydrant"]
+
+wandb:
+  enabled: true
+  mode: offline
+  project: vlm-coco-interleaved
+  name: ${exp_name}
+  tags: ["coco","zeroshot","trainval"]

@@ -1,0 +1,87 @@
+# HAM10000 finetuning config (multiclass)
+# Use output_root on /scratch to avoid HOME quota issues on Compute Canada.
+
+run:
+  name: ham10000_blip2opt_eva_g14
+
+output_root: /scratch/${USER}/ham_runs
+device: cuda
+
+data:
+  img_root: /home/ali95/LAVIS/datasets/HAM10000/images
+  meta_csv: /home/ali95/LAVIS/datasets/HAM10000/HAM10000_metadata.csv
+  splits_dir: /home/ali95/LAVIS/datasets/HAM10000/splits
+  
+
+  # ✅ ADD THESE (match what run.py expects)
+  train_csv: /home/ali95/LAVIS/datasets/HAM10000/splits/ham_train.csv
+  val_csv:   /home/ali95/LAVIS/datasets/HAM10000/splits/ham_val.csv
+  test_csv:  /home/ali95/LAVIS/datasets/HAM10000/splits/ham_test.csv
+
+  img_ext: .jpg
+  img_size: 224
+  num_workers: 4
+  batch_size: 256
+  pin_memory: true
+
+  augment:
+    # Standard, conservative augmentations for dermoscopy images
+    random_resized_crop_scale: [0.8, 1.0]
+    color_jitter: [0.2, 0.2, 0.2, 0.05]
+    random_rotation: 20
+    hflip_p: 0.5
+    vflip_p: 0.5
+    random_erasing_p: 0.1
+
+train:
+  epochs: 50
+  lr: 0.0001
+  weight_decay: 0.05
+  amp: true
+  log_every: 50
+  grad_clip: 1.0
+
+  # Save best according to this metric (recommended for imbalanced HAM10000)
+  select_metric: f1_macro
+  select_mode: max
+
+  # Options: null | balanced | [w0, w1, ..., wC-1]
+  class_weights: balanced
+
+  loss:
+    # ce | focal
+    name: ce
+    label_smoothing: 0.0
+    # focal_gamma: 2.0
+
+model:
+  name: blip2
+  blip2:
+    # ===== Option A (recommended): BLIP2-OPT 2.7B
+    # NOTE: pretrain_opt2.7b already uses EVA ViT-g/14 as the vision encoder.
+    #lavis_name: blip2_opt
+    model_type: pretrain_opt2.7b
+
+    # Fine-tune knobs
+    train_qformer: true
+    train_vision: false
+    # Unfreeze last N ViT blocks (1–6 typical)
+    #unfreeze_vision_last_n: 2
+
+    # Classification head
+    #pooling: mean          # mean | cls
+    #head_hidden: 512       # 0 -> linear head
+    #activation: gelu       # relu | gelu | silu | tanh | none
+    #dropout: 0.2
+
+    # ===== Option B: BLIP2 feature-extractor with CLIP ViT-L/14 (no OPT)
+    # lavis_name: blip2_feature_extractor
+    # model_type: pretrain_vitL
+    # train_qformer: true
+    # train_vision: true
+    # unfreeze_vision_last_n: 2
+
+eval:
+  # Used only for eval_multiclass mode
+  checkpoint: ""
+  split: val

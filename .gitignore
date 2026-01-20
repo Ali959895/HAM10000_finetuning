@@ -1,0 +1,33 @@
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# caches & logs
+.cache/
+wandb/
+runs/
+logs/
+*.log
+
+# checkpoints / weights
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# data
+data/
+datasets/
+HAM10000*/   # if you placed images inside your repo folder
+*.zip
+*.tar
+*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db

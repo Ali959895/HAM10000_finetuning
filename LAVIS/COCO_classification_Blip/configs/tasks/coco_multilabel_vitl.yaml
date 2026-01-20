@@ -1,0 +1,54 @@
+task: classification
+job_id: coco_clip_vitl_run   # <-- THIS IS THE IMPORTANT PART
+
+run:
+  task: classification
+  distributed: true
+  dist_backend: nccl
+  dist_url: env://
+  world_size: 1
+  rank: 0
+  gpu: 0
+  seed: 42
+  output_dir: /scratch/ali95/blip_coco_cls
+  job_id: coco_clip_vitl_run
+  device: "cuda"
+  
+run_cfg:
+  output_dir: /scratch/ali95/blip_coco_cls
+  job_id: coco_clip_vitl_run
+  
+model:
+  arch: clip_vitl_multilabel
+  model_type: clip_vitl_multilabel   # must match PRETRAINED_MODEL_CONFIG_DICT key
+  num_classes: 80
+  image_size: 224
+  pretrained_path: /scratch/ali95/hf_cache/open_clip_pytorch_model.safetensors
+  freeze_clip: false
+datasets:
+  coco_multilabel:
+    type: coco_multilabel   # IMPORTANT: must match @registry.register_builder("coco_multilabel")
+
+    build_info:
+      images:
+        storage: /scratch/ali95/coco/coco/images/train2017
+      annotations:
+        storage: /scratch/ali95/coco/coco/annotations/instances_train2017.json
+
+    build_info_eval:
+      images:
+        storage: /scratch/ali95/coco/coco/images/val2017
+      annotations:
+        storage: /scratch/ali95/coco/coco/annotations/instances_val2017.json
+
+train:
+  batch_size: 8
+  num_workers: 8
+  max_epoch: 10
+  init_lr: 1e-4
+  min_lr: 1e-6
+  weight_decay: 0.05
+  warmup_steps: 500
+
+eval:
+  batch_size: 16

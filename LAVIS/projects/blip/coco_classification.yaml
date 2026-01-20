@@ -1,0 +1,35 @@
+model:
+  arch: blip_classification
+  model_type: base
+  pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP/blip_pretrained.pth"
+  num_classes: 80
+  loss_type: bce
+  use_sigmoid: true
+
+datasets:
+  coco_classification: {}
+
+preprocess:
+  vis_processor:
+    train:
+      name: blip_image_train
+      image_size: 384
+    eval:
+      name: blip_image_eval
+      image_size: 384
+
+run:
+  task: classification
+
+  # 🔴 REQUIRED for LAVIS
+  world_size: 1
+  rank: 0
+  dist_url: env://
+  seed: 42
+  batch_size_train: 32
+  batch_size_eval: 64
+  num_workers: 8
+  max_epoch: 20
+  init_lr: 1e-4
+  min_lr: 1e-6
+  output_dir: /scratch/ali95/blip_coco_cls
