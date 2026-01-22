@@ -1,0 +1,261 @@
+# HAM10000 fine-tuning config (v3)
+# - Supports BLIP / BLIP-2 / CLIP benchmarking
+# - Supports partial ViT fine-tuning (unfreeze last N blocks)
+# - AdamW + cosine + warmup
+# - CE + balanced class weights + label smoothing
+# - Per-epoch metrics + save-best by f1_macro
+
+run:
+  name: ham10000_v3_blip2opt_eva_g14
+
+output_root: /scratch/${USER}/ham_runs
+device: cuda
+
+data:
+  # Root folder containing images (jpg)
+  img_root: /home/ali95/LAVIS/datasets/HAM10000/images
+
+  # Pre-generated CSV splits (one row per sample; needs image + label columns)
+  train_csv: /home/ali95/LAVIS/datasets/HAM10000/splits/train.csv
+  val_csv:   /home/ali95/LAVIS/datasets/HAM10000/splits/val.csv
+  test_csv:  /home/ali95/LAVIS/datasets/HAM10000/splits/test.csv
+
+  # Optional: explicitly set label list (otherwise inferred from train_csv)
+  # classes: ["akiec","bcc","bkl","df","mel","nv","vasc"]
+
+  # Optional: override column names (otherwise auto-detected)
+  # image_col: image
+  # label_col: dx
+
+  image_size: 224
+  num_workers: 4
+  pin_memory: true
+
+  # Conservative augmentations (tune if needed)
+  augment:
+    random_resized_crop_scale: [0.75, 1.0]
+    hflip: true
+    vflip: true
+    rotation: 15
+    color_jitter: [0.15, 0.15, 0.15, 0.03]
+    # mean/std default to ImageNet if omitted
+    # mean: [0.485, 0.456, 0.406]
+    # std:  [0.229, 0.224, 0.225]
+
+task:
+  # multiclass (7-way) or binary (malignant vs benign) via label_map
+  name: multiclass
+  # For binary detection, uncomment:
+  # name: binary
+  # label_map:
+  #   akiec: malignant
+  #   bcc: malignant
+  #   mel: malignant
+  #   nv: benign
+  #   bkl: benign
+  #   df: benign
+  #   vasc: benign
+
+model:
+  # Which backbone to run in train_multiclass / eval_multiclass:
+  #   blip2_opt, blip2_t5, blip2_feature_extractor, blip_feature_extractor, clip
+  arch: blip2_opt
+
+  # Generic classifier knobs (applies to our wrappers)
+  pooling: mean           # mean | cls
+  head_hidden: 512        # 0 -> linear
+  activation: silu        # relu | gelu | silu | tanh | none
+  dropout: 0.2
+
+  # BLIP / BLIP-2 knobs (LAVIS)
+  lavis_name: blip2_opt
+  model_type: pretrain_opt2.7b
+
+  train_qformer: true
+  train_vision: true
+  unfreeze_vision_last_n: 2   # if >0, only last N ViT blocks are trainable
+
+  # CLIP knobs (OpenCLIP preferred; fallback to LAVIS if OpenCLIP unavailable)
+  clip:
+    model_name: ViT-L-14
+    pretrained: openai
+
+train:
+  epochs: 5
+  batch_size: 8
+  lr: 2e-5
+  weight_decay: 0.05
+
+  # Gradient accumulation (useful if GPU mem is tight)
+  accum_steps: 1
+
+  # AMP + stability
+  amp: true
+  amp_dtype: fp16   # or bf16
+  grad_clip: 1.0
+
+  # Optim + schedule
+  optimizer:
+    name: adamw
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+
+  scheduler:
+    name: cosine
+    warmup_ratio: 0.1   # warmup_steps = ratio * total_steps (if warmup_steps not set)
+    # warmup_steps: 500
+    min_lr: 0.0
+
+  # Imbalance handling
+  class_weights: balanced
+  loss:
+    name: ce
+    label_smoothing: 0.05
+
+  log_every: 500
+
+eval:
+  select_metric: f1_macro
+  select_mode: max
+  report_metrics:
+    - f1_macro
+    - acc
+    - auroc_ovr_macro
+    - log_loss
+    - f1_weighted
+    - bacc
+    - precision_macro
+    - recall_macro
+    - loss
+    - precision_weighted
+    - recall_weighted
+    - sensitivity_macro
+    - specificity_macro
+    - bleu
+    - rougeL
+    - bertscore_f1
+
+  # used only for eval_multiclass
+  checkpoint: ""
+  split: val
+
+
+benchmark:
+  enabled: true
+  models:
+  
+    - name: BLIP2_OPT_2.7B
+      arch: blip2_opt
+      lavis_name: blip2_opt
+      model_type: pretrain_opt2.7b
+      train_qformer: true
+      train_vision: true
+      unfreeze_vision_last_n: 2
+      pooling: mean
+      head_hidden: 512
+      activation: silu
+      dropout: 0.2 
+  
+    - name: BLIP_feature_base
+      arch: blip_feature_extractor
+      lavis_name: blip_feature_extractor
+      model_type: base
+      pooling: mean
+      head_hidden: 512
+      activation: gelu
+      dropout: 0.2
+  
+    
+  
+    - name: BLIP2_OPT_6.7B
+      arch: blip2_opt
+      lavis_name: blip2_opt
+      model_type: pretrain_opt6.7b
+      train_qformer: true
+      train_vision: false
+      pooling: mean
+      head_hidden: 512
+      activation: silu
+      dropout: 0.2
+  
+    - name: BLIP2_T5_flant5xl_vitL
+      arch: blip2_t5
+      lavis_name: blip2_t5
+      model_type: pretrain_flant5xl_vitL
+      train_qformer: false
+      train_vision: false
+      pooling: mean
+      head_hidden: 512
+      activation: silu
+      dropout: 0.2  
+      
+    - name: BLIP2_feature_vitL
+      arch: blip2_feature_extractor
+      lavis_name: blip2_feature_extractor
+      model_type: pretrain_vitL
+      train_qformer: true
+      train_vision: true
+      unfreeze_vision_last_n: 2
+      pooling: mean
+      head_hidden: 512
+      activation: silu
+      dropout: 0.2
+      
+    
+    - name: CLIP_ViT-B-32
+      arch: clip
+      clip:
+        model_name: ViT-B-32
+        pretrained: "/scratch/ali95/open_clip_cache/CLIP-ViT-B-32-laion2B-s34B-b79K/open_clip_model.safetensors"   
+      pooling: cls
+      head_hidden: 512
+      activation: gelu
+      dropout: 0.2
+      
+    - name: CLIP_ViT-L-14
+      arch: clip
+      clip:
+        model_name: ViT-L-14
+        pretrained: "/scratch/ali95/open_clip_cache/CLIP-ViT-L-14-laion2B-s32B-b82K/open_clip_pytorch_model.safetensors"
+      pooling: cls
+      head_hidden: 512
+      activation: gelu
+      dropout: 0.2
+    
+  
+    - name: CLIP_RN50x16
+      arch: clip
+      clip:
+        model_name: RN50x16
+        pretrained: "/scratch/ali95/open_clip_cache/RN50x16/open_clip_model.safetensors"
+        input_size: 224
+      pooling: cls
+      head_hidden: 512
+      activation: gelu
+      dropout: 0.2
+  
+    - name: CLIP_RN50
+      arch: clip
+      clip:
+        model_name: RN50
+        # If Narval has no internet, also prefer local path after downloading on your PC
+        pretrained: "/scratch/ali95/open_clip_cache/RN50/open_clip_model.safetensors"
+      pooling: cls
+      head_hidden: 512
+      activation: gelu
+      dropout: 0.2
+      
+      
+    - name: BLIP_feature_base
+      arch: blip_feature_extractor
+      lavis_name: blip_feature_extractor
+      model_type: base
+      pooling: mean
+      head_hidden: 512
+      activation: gelu
+      dropout: 0.2
+      
+    
+      
+    
+

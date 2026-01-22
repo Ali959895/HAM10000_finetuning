@@ -1,0 +1,58 @@
+# HAM10000 supervised fine-tuning config (multiclass)
+seed: 42
+
+run:
+  output_root: /scratch/ali95/blip2_interleaved_project/runs
+  exp_name: ham10000_finetune_blip2
+
+data:
+  images_dir: /scratch/ali95/datasets/HAM10000/images
+  meta_csv: /scratch/ali95/datasets/HAM10000/HAM10000_metadata.csv
+  splits_dir: /scratch/ali95/datasets/HAM10000/splits_lesion
+  img_ext: .jpg
+  img_size: 224
+  num_workers: 4
+
+model:
+  name: blip2
+  num_classes: 7
+  blip2:
+    lavis_name: blip2_feature_extractor
+    model_type: pretrain_vitL
+    device: cuda
+    freeze_vision: true
+    pooling: cls
+    dropout: 0.1
+
+train:
+  epochs: 15
+  batch_size: 32
+  accum_steps: 1
+  amp: true
+  grad_clip_norm: 1.0
+
+  optimizer: adamw
+  lr: 2.0e-4
+  weight_decay: 5.0e-2
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+
+  warmup_ratio: 0.05
+  scheduler: cosine
+
+  label_smoothing: 0.1
+
+  class_weights: true
+  sampler: weighted
+  # unfreeze_vision_epoch: 5
+
+eval:
+  batch_size: 64
+  metrics: ["acc","balanced_acc","f1_macro","f1_weighted","auc_ovr"]
+  save_best: "f1_macro"
+
+wandb:
+  enabled: true
+  project: ham10000
+  mode: offline
+  tags: ["finetune","multiclass","blip2"]

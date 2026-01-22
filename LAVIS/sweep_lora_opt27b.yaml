@@ -1,0 +1,37 @@
+program: blip2_opt_eva02_l14_coco_v2.py
+method: grid
+count: 18   # ?? REQUIRED FOR OFFLINE SWEEPS
+
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --lavis_repo=/home/ali95/LAVIS
+  - --ann_train=/scratch/ali95/coco/coco/annotations/captions_train2017.json
+  - --ann_val=/scratch/ali95/coco/coco/annotations/captions_val2017.json
+  - --images_train=/scratch/ali95/coco/coco/images/train2017
+  - --images_val=/scratch/ali95/coco/coco/images/val2017
+  - --output_dir=/scratch/ali95/blip2_runs/blip2_opt2.7b_eva02l14_coco/${wandb.run.id}
+  - --model_type=pretrain_opt2.7b
+  - --epochs=50
+  - --batch_size=16
+  - --accum_steps=4
+  - --num_workers=4
+  - --grad_clip=1.0
+  - --bf16
+  - --use_lora
+  - --use_wandb
+  - --wandb_offline
+  - --wandb_project=blip2_coco
+
+parameters:
+  lr:
+    values: [1e-4, 5e-5, 3e-5]
+  lora_r:
+    values: [8, 16, 32]
+  lora_dropout:
+    values: [0.05]
+  lora_targets:
+    values:
+      - q_proj,v_proj
+      - q_proj,k_proj,v_proj,out_proj

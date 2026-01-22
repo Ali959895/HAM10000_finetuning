@@ -1,0 +1,8 @@
+lavis
+torch
+torchvision
+open_clip_torch
+timm
+pyyaml
+pillow
+numpy

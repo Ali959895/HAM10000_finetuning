@@ -1,0 +1,26 @@
+model:
+  arch: clip_vitl_multilabel
+  model_type: vitl
+
+  # ===== Vision Backbone =====
+  vision_encoder:
+    name: clip_vitl
+    image_size: 224
+    freeze: false
+
+  # ===== Classification Head =====
+  num_classes: 80
+  loss_type: bce          # multi-label BCE loss
+  use_sigmoid: true       # required for multi-label classification
+  dropout: 0.1
+
+  # ===== Initialization =====
+  pretrained: openai      # uses OpenAI CLIP ViT-L/14 weights
+
+  # ===== Optimization knobs =====
+  grad_checkpointing: true
+  fp16: false
+  bf16: true
+
+  # ===== Misc =====
+  max_txt_len: 32

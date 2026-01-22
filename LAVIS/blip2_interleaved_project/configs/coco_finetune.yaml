@@ -1,0 +1,48 @@
+exp_name: coco_finetune_blip2
+seed: 123
+deterministic: true
+device: cuda
+task: coco_multilabel
+
+data:
+  img_size: 224
+  num_workers: 4
+  coco:
+    train_images_dir: ${COCO_TRAIN_IMAGES_DIR}
+    train_ann_json: ${COCO_TRAIN_ANN_JSON}
+    val_images_dir: ${COCO_VAL_IMAGES_DIR}
+    val_ann_json: ${COCO_VAL_ANN_JSON}
+
+model:
+  blip2:
+    model_type: pretrain_opt2.7b
+
+train:
+  epochs: 30
+  batch_size: 32
+  amp: true
+  log_every: 100
+  accum_steps: 2
+  train_qformer: true
+
+optim:
+  name: adamw
+  lr: 5e-5
+  weight_decay: 0.02
+
+sched:
+  name: cosine
+  t_max: 120000   # set to total optimizer steps
+  eta_min: 1e-6
+
+eval:
+  batch_size: 32
+  select_best: mAP
+  checkpoint: ""
+
+wandb:
+  enabled: true
+  mode: offline
+  project: vlm-coco-interleaved
+  name: ${exp_name}
+  tags: ["coco","finetune"]

@@ -1,0 +1,46 @@
+exp_name: mammo_finetune_blip2
+seed: 123
+deterministic: true
+device: cuda
+task: medical_csv
+
+data:
+  img_size: 224
+  num_workers: 4
+  medical:
+    root_dir: ${MAMMO_ROOT}
+    train_csv: ${MAMMO_TRAIN_CSV}
+    val_csv: ${MAMMO_VAL_CSV}
+    num_classes: 1
+    label_mode: binary
+
+model:
+  blip2:
+    model_type: pretrain_opt2.7b
+
+train:
+  epochs: 10
+  batch_size: 8
+  amp: true
+  log_every: 20
+  train_qformer: true
+
+optim:
+  name: adamw
+  lr: 5.0e-5
+  weight_decay: 0.01
+
+sched:
+  name: cosine
+
+eval:
+  batch_size: 16
+  select_best: AUROC
+  checkpoint: ""
+
+wandb:
+  enabled: true
+  mode: offline
+  project: vlm-medical-interleaved
+  name: ${exp_name}
+  tags: ["mammography","finetune"]

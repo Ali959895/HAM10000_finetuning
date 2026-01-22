@@ -1,0 +1,36 @@
+controller:
+  type: local
+
+program: /home/ali95/LAVIS/train_coco.py
+
+method: bayes
+
+metric:
+  name: val/mAP
+  goal: maximize
+
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --model_name=blip2_t5
+  - --model_type=pretrain_flant5xl_vitL
+  - --run_zeroshot
+
+parameters:
+  lr:
+    distribution: log_uniform_values
+    min: 0.000001
+    max: 0.0005
+
+  batch_size:
+    values: [8, 16, 32]
+
+  epochs:
+    values: [5, 10]
+
+  optimizer:
+    values: ["adamw"]
+
+  amp:
+    values: [true]
