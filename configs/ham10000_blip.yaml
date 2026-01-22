@@ -81,8 +81,8 @@ model:
     pretrained: openai
 
 train:
-  epochs: 2
-  batch_size: 2
+  epochs: 30
+  batch_size: 128
   lr: 2e-5
   weight_decay: 0.05
 
@@ -143,7 +143,7 @@ eval:
 benchmark:
   enabled: true
   models:
-    
+  
     - name: BLIP_feature_base
       arch: blip_feature_extractor
       lavis_name: blip_feature_extractor
@@ -152,6 +152,9 @@ benchmark:
       head_hidden: 512
       activation: gelu
       dropout: 0.2
+    
+    
+    
       
     
 

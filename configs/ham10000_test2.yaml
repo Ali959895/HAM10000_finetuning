@@ -81,8 +81,8 @@ model:
     pretrained: openai
 
 train:
-  epochs: 4
-  batch_size: 4
+  epochs: 2
+  batch_size: 2
   lr: 2e-5
   weight_decay: 0.05
 
@@ -143,6 +143,19 @@ eval:
 benchmark:
   enabled: true
   models: 
+  
+  
+    - name: BLIP2_OPT_2.7B
+      arch: blip2_opt
+      lavis_name: blip2_opt
+      model_type: pretrain_opt2.7b
+      train_qformer: true
+      train_vision: false
+      unfreeze_vision_last_n: 2
+      pooling: mean
+      head_hidden: 512
+      activation: silu
+      dropout: 0.2
   
     - name: CLIP_RN50
       arch: clip
@@ -232,17 +245,7 @@ benchmark:
       dropout: 0.2
 
       
-    - name: BLIP2_OPT_2.7B
-      arch: blip2_opt
-      lavis_name: blip2_opt
-      model_type: pretrain_opt2.7b
-      train_qformer: true
-      train_vision: true
-      unfreeze_vision_last_n: 2
-      pooling: mean
-      head_hidden: 512
-      activation: silu
-      dropout: 0.2
+    
       
     
 

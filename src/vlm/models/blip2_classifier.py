@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+from torch.cuda.amp import autocast
 
 import torch
 import torch.nn as nn
@@ -305,6 +306,7 @@ class Blip2Classifier(nn.Module):
         # Ensure input matches vision module dtype/device
         v_p = next(visual.parameters())
         v_dtype, v_device = v_p.dtype, v_p.device
+        
         x = x.to(device=v_device, dtype=v_dtype)
     
         image_embeds = visual(x)  # <-- ALWAYS created here
@@ -356,8 +358,26 @@ class Blip2Classifier(nn.Module):
 
     def _encode_image(self, x: torch.Tensor) -> torch.Tensor:
         # Case A: feature-extractor style models
+        p = next(self.backbone.parameters())
+        x = x.to(device=p.device, dtype=p.dtype, non_blocking=True)
         if hasattr(self.backbone, "extract_features"):
-            out = self.backbone.extract_features({"image": x}, mode="image")
+            # pick dtype/device from the actual visual encoder (most reliable)
+            ve = getattr(self.backbone, "visual_encoder", None)
+            p = next(ve.parameters()) if ve is not None else next(self.backbone.parameters())
+            
+            # force cast
+            x = x.to(device=p.device, dtype=p.dtype, non_blocking=True)
+            
+            # IMPORTANT: build the dict AFTER casting x
+            sample = {"image": x}
+            
+            # (temporary debug) confirm right before call
+            # print("DBG _encode_image:", sample["image"].dtype, sample["image"].device, "ve dtype=", p.dtype, "ve dev=", p.device)
+            
+            #out = self.backbone.extract_features(sample, mode="image")
+            with autocast(enabled=x.is_cuda, dtype=torch.float16):
+                out = self.backbone.extract_features(sample, mode="image")
+
 
             feats = None
             if hasattr(out, "image_embeds_proj") and out.image_embeds_proj is not None:
@@ -390,9 +410,14 @@ class Blip2Classifier(nn.Module):
     def _infer_feature_dim(self):
         visual = self.visual
         vdtype, vdev = _module_dtype_device(visual, fallback_device="cuda")
-        dummy = torch.zeros(1, 3, self.image_size, self.image_size,
-                        device=self.vision_device, dtype=self.vision_dtype)
+        
+        ve = getattr(self.backbone, "visual_encoder", None)
+        p = next(ve.parameters()) if ve is not None else next(self.backbone.parameters())
+        
+        dummy = torch.zeros(1, 3, self.image_size, self.image_size, device=p.device, dtype=p.dtype)
         feats = self._encode_image(dummy)
+
+
 #        dummy = torch.zeros(1, 3, self.image_size, self.image_size, device=self.vision_device, dtype=self.vision_dtype)
 #        feats = self._encode_image(dummy)
 
@@ -451,7 +476,11 @@ class Blip2Classifier(nn.Module):
 
         if hasattr(self.backbone, "extract_features"):
             # blip2_feature_extractor path
-            out = self.backbone.extract_features({"image": images}, mode="image")
+            sample = {"image": x}
+
+            with autocast(enabled=(x.is_cuda), dtype=torch.float16):
+                out = self.backbone.extract_features(sample, mode="image")
+            #out = self.backbone.extract_features({"image": images}, mode="image")
             # LAVIS outputs may expose image_embeds or image_embeds_proj
             img_embeds = getattr(out, "image_embeds", None)
             if img_embeds is None:
