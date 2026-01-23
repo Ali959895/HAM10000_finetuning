@@ -1,0 +1,120 @@
+run:
+  name: ham10000_v3_blip2opt_eva_g14
+output_root: /scratch/${USER}/ham_runs
+device: cuda
+data:
+  img_root: /home/ali95/LAVIS/datasets/HAM10000/images
+  train_csv: /home/ali95/LAVIS/datasets/HAM10000/splits/train.csv
+  val_csv: /home/ali95/LAVIS/datasets/HAM10000/splits/val.csv
+  test_csv: /home/ali95/LAVIS/datasets/HAM10000/splits/test.csv
+  image_size: 224
+  num_workers: 8
+  pin_memory: true
+  augment:
+    random_resized_crop_scale:
+    - 0.75
+    - 1.0
+    hflip: true
+    vflip: true
+    rotation: 15
+    color_jitter:
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.03
+task:
+  name: multiclass
+model:
+  arch: blip2_opt
+  pooling: mean
+  head_hidden: 512
+  activation: silu
+  dropout: 0.2
+  lavis_name: blip2_opt
+  model_type: pretrain_opt2.7b
+  train_qformer: true
+  train_vision: true
+  unfreeze_vision_last_n: 2
+  clip:
+    model_name: ViT-L-14
+    pretrained: openai
+  vit_precision: fp32
+train:
+  epochs: 10
+  batch_size: 128
+  lr: 2e-5
+  weight_decay: 0.05
+  accum_steps: 1
+  amp: false
+  amp_dtype: fp16
+  grad_clip: 1.0
+  optimizer:
+    name: adamw
+    betas:
+    - 0.9
+    - 0.999
+    eps: 1.1576182342480754e-08
+    lr: 1.1457967804584173e-05
+    weight_decay: 0.021001045899865643
+  scheduler:
+    name: cosine
+    warmup_ratio: 0.1185080099773589
+    min_lr: 0.0
+  class_weights: balanced
+  loss:
+    name: ce
+    label_smoothing: 0.05
+  log_every: 500
+  grad_clip_norm: 1.6123257496397494
+  label_smoothing: 0.009369523986159246
+  dropout: 0.0581652233476849
+  use_class_weights: true
+  loss_type: ce
+  focal_gamma: 2.432039225844807
+  grad_accum_steps: 1
+eval:
+  select_metric: acc
+  select_mode: max
+  report_metrics:
+  - f1_macro
+  - acc
+  - auroc_ovr_macro
+  - log_loss
+  - f1_weighted
+  - bacc
+  - precision_macro
+  - recall_macro
+  - loss
+  - precision_weighted
+  - recall_weighted
+  - sensitivity_macro
+  - specificity_macro
+  - bleu
+  - rougeL
+  - bertscore_f1
+  checkpoint: ''
+  split: val
+benchmark:
+  enabled: true
+  models:
+  - name: BLIP2_OPT_2.7B
+    arch: blip2_opt
+    lavis_name: blip2_opt
+    model_type: pretrain_opt2.7b
+    train_qformer: true
+    train_vision: true
+    unfreeze_vision_last_n: 2
+    pooling: mean
+    head_hidden: 512
+    activation: silu
+    dropout: 0.2
+  - name: BLIP2_OPT_6.7B
+    arch: blip2_opt
+    lavis_name: blip2_opt
+    model_type: pretrain_opt6.7b
+    train_qformer: true
+    train_vision: false
+    pooling: mean
+    head_hidden: 512
+    activation: silu
+    dropout: 0.2

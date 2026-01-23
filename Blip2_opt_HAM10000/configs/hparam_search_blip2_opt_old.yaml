@@ -1,0 +1,59 @@
+# configs/hparam_search_blip2_opt.yaml
+# Strong sweep for BLIP2-OPT on HAM10000 (no core code changes)
+
+base_config: "configs/ham10000_finetune.yaml"
+
+# this must match what your run writes into metrics.json
+metric: "f1_macro"
+maximize: true
+
+trials: 30
+seed: 42
+
+# Optional: run short trials first
+fast_tune:
+  enabled: true
+  epochs: 10              # keep 1.0 if you don't have subset logic
+
+search_space:
+
+  # ----- stability / speed -----
+  train.amp: [false, true]             # if you get dtype issues, amp=false helps
+  model.vit_precision: ["fp32", "fp16"]# fp32 more stable; fp16 faster
+  train.grad_clip_norm: [0.5, 1.0, 2.0]
+
+  # ----- optimizer / schedule -----
+  # ----- optimizer / schedule -----
+  train.optimizer.name: ["adamw", "adam"]
+  train.optimizer.lr: ["loguniform", 8.0e-6, 4.0e-5]
+  train.optimizer.weight_decay: ["loguniform", 5.0e-4, 8.0e-2]
+
+  train.scheduler.name: ["cosine", "none"]
+  train.scheduler.warmup_ratio: ["uniform",1.0e-3, 2.0e-1]
+  train.optimizer.eps: ["loguniform", 1.0e-8, 1.0e-6]
+
+  # optional but very helpful if your code supports it:
+  train.grad_clip_norm: ["uniform", 0.5, 2.0]
+  train.label_smoothing: ["uniform", 0.0, 0.10]
+
+
+  # ----- regularization -----
+  train.dropout: ["uniform", 0.0, 0.25]
+  train.label_smoothing: ["uniform", 0.0, 0.10]
+
+  # ----- imbalance handling -----
+  train.use_class_weights: [true, false]
+  train.loss_type: ["ce", "focal"]     # if your code supports loss_type switching
+  train.focal_gamma: ["uniform", 1.0, 3.0]
+
+  # ----- batch / accumulation -----
+  train.batch_size: [8, 12, 16]
+  train.grad_accum_steps: [1, 2, 4]    # wrapper can map this if your code supports it
+
+# Hard constraints to avoid OOM / unstable combos (wrapper filters)
+constraints:
+  - if:
+      train.batch_size: 16
+      train.amp: false
+    then:
+      train.grad_accum_steps: [2, 4]

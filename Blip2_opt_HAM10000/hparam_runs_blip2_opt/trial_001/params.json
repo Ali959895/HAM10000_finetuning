@@ -1,0 +1,18 @@
+{
+  "train.amp": true,
+  "model.vit_precision": "fp16",
+  "train.grad_clip_norm": 1.71414568501674,
+  "train.optimizer.name": "adamw",
+  "train.optimizer.lr": 2.713148567681716e-05,
+  "train.optimizer.weight_decay": 0.0011242898605468502,
+  "train.scheduler.name": "none",
+  "train.scheduler.warmup_ratio": 0.06870985278708039,
+  "train.optimizer.eps": 2.0462514474407176e-08,
+  "train.label_smoothing": 0.09572130722067812,
+  "train.dropout": 0.08414863627815669,
+  "train.use_class_weights": true,
+  "train.loss_type": "focal",
+  "train.focal_gamma": 1.193432753666928,
+  "train.batch_size": 64,
+  "train.grad_accum_steps": 4
+}
