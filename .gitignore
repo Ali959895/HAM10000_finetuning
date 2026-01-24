@@ -22,7 +22,7 @@ logs/
 
 # data
 data/
-datasets/
+#datasets/
 HAM10000*/   # if you placed images inside your repo folder
 *.zip
 *.tar
